@@ -1,0 +1,270 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
+import { Category, Offer } from '@/types/admin';
+import Sidebar from '@/components/admin/Sidebar';
+import DashboardStats from '@/components/admin/DashboardStats';
+import ManageAlbums from '@/components/admin/ManageAlbums';
+import ManageCategories from '@/components/admin/ManageCategories';
+import ManageOffers from '@/components/admin/ManageOffers';
+
+export default function AdminPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState<boolean>(true);
+
+  const [usernameInput, setUsernameInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'photos' | 'categories' | 'offers'>('dashboard');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const [albumsCount, setAlbumsCount] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [offers, setOffers] = useState<Offer[]>([]);
+
+  const [submittingCat, setSubmittingCat] = useState(false);
+  const [submittingOffer, setSubmittingOffer] = useState(false);
+
+  useEffect(() => {
+    const loggedIn = localStorage.getItem('aliens_admin_auth');
+    if (loggedIn === 'true') {
+      setIsAuthenticated(true);
+    }
+    setIsCheckingAuth(false);
+  }, []);
+
+  const fetchData = async () => {
+    // Dashboard Stats සඳහා පමණක් ඇල්බම් ගණන ලබා ගැනීම
+    const { data: albumData } = await supabase.from('albums').select('*');
+    if (albumData) setAlbumsCount(albumData);
+
+    // Categories ලබා ගැනීම
+    const { data: catData } = await supabase.from('categories').select('*').order('name', { ascending: true });
+    if (catData) setCategories(catData);
+
+    // Special Offers ලබා ගැනීම
+    const { data: offerData } = await supabase.from('special_offers').select('*').order('created_at', { ascending: false });
+    if (offerData) setOffers(offerData);
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) fetchData();
+  }, [isAuthenticated]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+
+    try {
+      const { data, error } = await supabase.rpc('verify_admin_login', {
+        input_username: usernameInput.trim(),
+        input_password: passwordInput,
+      });
+
+      if (error || data !== true) {
+        setErrorMsg('Invalid Username or Password!');
+        return;
+      }
+
+      setIsAuthenticated(true);
+      localStorage.setItem('aliens_admin_auth', 'true');
+    } catch (err) {
+      console.error('Login error:', err);
+      setErrorMsg('Something went wrong.');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('aliens_admin_auth');
+  };
+
+  // Category handler (Secure RPC with duplicate checking)
+  const handleAddCategory = async (categoryName: string) => {
+    const formattedCatName = categoryName.trim().toUpperCase();
+    setSubmittingCat(true);
+
+    const { error } = await supabase.rpc('add_category_secure', {
+      cat_name: formattedCatName
+    });
+
+    if (!error) {
+      fetchData();
+      alert('✨ Category added successfully!');
+    } else {
+      console.error('Category insert error:', error);
+      if (error.code === '23505' || error.message.includes('unique constraint')) {
+        alert(`⚠️ මෙම නමින් ("${formattedCatName}") දැනටමත් Category එකක් පවතී!`);
+      } else {
+        alert(`❌ Error: ${error.message}`);
+      }
+    }
+    setSubmittingCat(false);
+  };
+
+  // Offer handlers
+  const handleAddOffer = async (data: { title: string; discountText: string; description: string; validUntil: string }) => {
+    if (!window.confirm('Publish this special offer?')) return;
+    setSubmittingOffer(true);
+
+    const { error } = await supabase.from('special_offers').insert([
+      { title: data.title, discount_text: data.discountText, description: data.description, valid_until: data.validUntil, active: true }
+    ]);
+
+    if (!error) {
+      fetchData();
+      alert('✨ Offer published!');
+    } else {
+      alert('❌ Error adding offer!');
+    }
+    setSubmittingOffer(false);
+  };
+
+  const handleDeleteOffer = async (id: number) => {
+    if (!window.confirm('Remove this offer?')) return;
+    const { error } = await supabase.from('special_offers').delete().eq('id', id);
+    if (!error) {
+      fetchData();
+      alert('🗑️ Offer removed!');
+    }
+  };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'සුබ උදෑසනක්';
+    if (hour < 17) return 'සුබ දවාලක්';
+    return 'සුබ සන්ධ්‍යාවක්';
+  };
+
+  if (isCheckingAuth) {
+    return (
+      <main className="min-h-screen bg-[#0B0B0E] text-[#F3F4F6] flex items-center justify-center font-sans">
+        <p className="text-sm text-[#9CA3AF] animate-pulse">Loading AI Control Center...</p>
+      </main>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <main className="min-h-screen bg-[#0B0B0E] text-[#F3F4F6] flex items-center justify-center p-6 font-sans">
+        <div className="w-full max-w-md bg-[#141419] p-8 rounded-2xl border border-[#D97706]/30 shadow-[0_0_30px_rgba(217,119,6,0.15)]">
+          <div className="text-center mb-8">
+            <span className="text-[10px] tracking-widest uppercase bg-[#D97706]/10 text-[#D97706] px-3 py-1 rounded-full border border-[#D97706]/20 font-semibold">
+              ✨ Smart Portal v2.0
+            </span>
+            <h1 className="text-2xl font-serif font-bold text-white uppercase tracking-widest mt-4">
+              Admin <span className="text-[#D97706]">Portal</span>
+            </h1>
+            <p className="text-xs text-[#9CA3AF] mt-2">Aliens Studio Security Check</p>
+          </div>
+
+          {errorMsg && (
+            <p className="text-xs text-red-500 bg-red-500/10 p-3 rounded-lg border border-red-500/20 text-center mb-4">
+              {errorMsg}
+            </p>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold tracking-wider uppercase mb-2 text-[#9CA3AF]">Username</label>
+              <input
+                type="text"
+                value={usernameInput}
+                onChange={(e) => setUsernameInput(e.target.value)}
+                className="w-full bg-[#0B0B0E] border border-[#262630] focus:border-[#D97706] text-white p-3 rounded-lg text-sm outline-none"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold tracking-wider uppercase mb-2 text-[#9CA3AF]">Password</label>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                className="w-full bg-[#0B0B0E] border border-[#262630] focus:border-[#D97706] text-white p-3 rounded-lg text-sm outline-none"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full bg-[#D97706] hover:bg-[#b56203] text-black font-semibold text-xs uppercase tracking-widest py-3 rounded-lg transition-all mt-6"
+            >
+              Sign In Securely
+            </button>
+          </form>
+
+          <div className="text-center mt-6">
+            <Link href="/" className="text-xs text-[#9CA3AF] hover:text-white transition-colors">
+              ← Back to Home
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#0B0B0E] text-[#F3F4F6] flex flex-col md:flex-row font-sans relative overflow-x-hidden">
+      
+      {/* Mobile Top Navbar */}
+      <div className="md:hidden bg-[#141419] border-b border-[#262630] p-4 flex justify-between items-center sticky top-0 z-50">
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="text-white p-2 bg-[#0B0B0E] border border-[#262630] rounded-lg"
+          >
+            ☰
+          </button>
+          <h2 className="text-sm font-serif font-bold text-white uppercase tracking-wider">
+            Aliens <span className="text-[#D97706]">Studio</span>
+          </h2>
+        </div>
+        <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/20 font-semibold animate-pulse">
+          ● Live
+        </span>
+      </div>
+
+      {isMobileMenuOpen && (
+        <div onClick={() => setIsMobileMenuOpen(false)} className="fixed inset-0 bg-black/70 z-40 md:hidden backdrop-blur-sm" />
+      )}
+
+      {/* Sidebar Component */}
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        isMobileMenuOpen={isMobileMenuOpen}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
+        handleLogout={handleLogout}
+        getGreeting={getGreeting}
+      />
+
+      {/* Main Content Area */}
+      <main className="flex-1 p-6 md:p-10 overflow-y-auto">
+        {activeTab === 'dashboard' && (
+          <DashboardStats photos={albumsCount} categories={categories} offers={offers} />
+        )}
+        {activeTab === 'photos' && (
+          <ManageAlbums categories={categories} />
+        )}
+        {activeTab === 'categories' && (
+          <ManageCategories
+            categories={categories}
+            onAddCategory={handleAddCategory}
+            submittingCat={submittingCat}
+          />
+        )}
+        {activeTab === 'offers' && (
+          <ManageOffers
+            offers={offers}
+            onAddOffer={handleAddOffer}
+            onDeleteOffer={handleDeleteOffer}
+            submittingOffer={submittingOffer}
+          />
+        )}
+      </main>
+    </div>
+  );
+}
