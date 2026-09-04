@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Offer } from '@/app/admin/types/admin';
+import { Offer } from '@/types/admin';
 
 interface ManageOffersProps {
   offers: Offer[];
@@ -71,7 +71,7 @@ export default function ManageOffers({ offers, onAddOffer, onDeleteOffer, submit
             <button
               type="submit"
               disabled={submittingOffer}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs uppercase tracking-widest px-8 py-3 rounded-xl transition-colors shadow-lg shadow-emerald-600/20"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs uppercase tracking-widest px-8 py-3 rounded-xl transition-colors shadow-lg shadow-emerald-600/20 cursor-pointer"
             >
               {submittingOffer ? 'Publishing...' : '+ Publish Special Offer'}
             </button>
@@ -88,7 +88,7 @@ export default function ManageOffers({ offers, onAddOffer, onDeleteOffer, submit
               </div>
               <button
                 onClick={() => onDeleteOffer(offer.id)}
-                className="text-red-400 hover:text-red-300 text-xs border border-red-500/30 px-3 py-1 rounded-lg transition-colors"
+                className="text-red-400 hover:text-red-300 text-xs border border-red-500/30 px-3 py-1 rounded-lg transition-colors cursor-pointer"
               >
                 Remove
               </button>
