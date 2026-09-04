@@ -380,7 +380,7 @@ export default function GalleryPage() {
                   {/* Front Cover Page */}
                   <div className="demo-page bg-[#1a1a24] text-white flex flex-col justify-between p-8 border-r border-[#262630] shadow-inner select-none cursor-grab">
                     <div className="text-center pt-8">
-                      <span className="text-[10px] tracking-[0.3em] uppercase text-[#D97706] font-semibold">Aliens Studio</span>
+                      <span className="text-[10px] tracking-[0.3em] uppercase text-[#D97706] font-semibold">Studio De-Lions</span>
                       <h1 className="text-2xl sm:text-3xl font-serif mt-4 text-white uppercase">{activeAlbum.title}</h1>
                     </div>
                     <div className="relative w-full h-64 rounded-xl overflow-hidden border border-[#262630]">
@@ -411,10 +411,15 @@ export default function GalleryPage() {
 
                   {/* Back Cover Page */}
                   <div className="demo-page bg-[#1a1a24] text-white flex flex-col justify-center items-center p-8 border-l border-[#262630] select-none text-center">
-                    <div className="w-12 h-12 rounded-full bg-[#D97706]/20 border border-[#D97706] flex items-center justify-center text-[#D97706] font-bold mb-5">
-                      A
-                    </div>
-                    <h3 className="font-serif text-xl uppercase tracking-wider text-white mb-3">Aliens Studio</h3>
+                     <Image 
+                                    src="/White & Gold.png" 
+                                    alt="Studio De-Lions Logo" 
+                                    width={150} 
+                                    height={50}
+                                    className="w-32 sm:w-40 h-auto object-contain"
+                                    priority
+                                  />
+                    <h3 className="font-serif text-xl uppercase tracking-wider text-white mb-3">Studio De-Lions</h3>
                     <p className="text-xs text-[#9CA3AF] max-w-xs leading-relaxed mb-6">Thank you for exploring our portfolio. Contact us to book your dream photoshoot.</p>
                     <Link href="/contact" className="bg-[#D97706] text-black font-bold text-xs uppercase tracking-widest px-6 py-2.5 rounded-full hover:bg-[#b45309] transition-all">
                       Book Now
