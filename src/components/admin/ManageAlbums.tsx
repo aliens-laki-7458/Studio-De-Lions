@@ -31,7 +31,6 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // Get category from URL query parameter (e.g. ?category=Wedding)
   const categoryParam = searchParams.get('category');
 
   const [albums, setAlbums] = useState<Album[]>([]);
@@ -39,7 +38,6 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
 
   const [title, setTitle] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [date, setDate] = useState('');
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -51,7 +49,6 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [addingMore, setAddingMore] = useState(false);
 
-  // Sync state with URL parameter if it changes externally or on refresh
   useEffect(() => {
     setSelectedMainCategory(categoryParam);
   }, [categoryParam]);
@@ -71,7 +68,6 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
     if (data) setAlbums(data);
   }
 
-  // Handle selecting a category and updating the URL query
   const handleSelectCategory = (catName: string | null) => {
     setSelectedMainCategory(catName);
     if (catName) {
@@ -90,6 +86,15 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
     }
   };
 
+  // Preview එකෙන් තალu කළ යුතු පින්තූරය ඉවත් කිරීම සඳහා function එක
+  const handleRemovePreviewPhoto = (indexToRemove: number) => {
+    const updatedFiles = imageFiles.filter((_, index) => index !== indexToRemove);
+    const updatedPreviews = previewUrls.filter((_, index) => index !== indexToRemove);
+    
+    setImageFiles(updatedFiles);
+    setPreviewUrls(updatedPreviews);
+  };
+
   const getStorageUrl = (fileName: string) => {
     const { data } = supabase.storage.from('gallery').getPublicUrl(fileName);
     return data.publicUrl;
@@ -105,6 +110,7 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
     setSubmitting(true);
     try {
       const finalCategory = selectedCategory || categories[0]?.name || 'wedding';
+      const currentDate = new Date().toISOString().split('T')[0];
 
       const coverFile = imageFiles[0];
       const coverFileName = `${Date.now()}_cover.jpg`;
@@ -118,7 +124,7 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
 
       const { data: albumData, error: albumError } = await supabase
         .from('albums')
-        .insert([{ title, category: finalCategory, date, cover_image_url: coverUrl }])
+        .insert([{ title, category: finalCategory, date: currentDate, cover_image_url: coverUrl }])
         .select()
         .single();
 
@@ -141,7 +147,6 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
 
       alert('✨ Album created successfully!');
       setTitle('');
-      setDate('');
       setImageFiles([]);
       setPreviewUrls([]);
       fetchAlbums();
@@ -266,19 +271,8 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
             </select>
           </div>
 
-          <div>
-            <label className="block text-xs text-[#9CA3AF] uppercase mb-1">Date</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full bg-[#0B0B0E] border border-[#262630] text-white p-3 rounded-xl text-sm outline-none focus:border-[#D97706] [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs text-[#9CA3AF] uppercase mb-1">Upload Photos</label>
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-[#9CA3AF] uppercase mb-1">Upload Photos (First photo will be the cover)</label>
             <input
               type="file"
               accept="image/*"
@@ -289,11 +283,61 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
             />
           </div>
 
+          {/* Photo Reordering Preview Section (Drag and Drop + Remove Option) */}
           {previewUrls.length > 0 && (
-            <div className="sm:col-span-2 flex flex-wrap gap-2 mt-2">
-              {previewUrls.map((url, i) => (
-                <img key={i} src={url} alt="preview" className="w-16 h-16 object-cover rounded-lg border border-[#262630]" />
-              ))}
+            <div className="sm:col-span-2 space-y-2 mt-2">
+              <p className="text-xs text-[#D97706] uppercase tracking-wider font-semibold">
+                Arrange Photo Order (Drag & Drop to reorder, 1st photo is Cover):
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#0B0B0E] p-4 rounded-xl border border-[#262630]">
+                {previewUrls.map((url, i) => (
+                  <div
+                    key={i}
+                    draggable
+                    onDragStart={(e) => e.dataTransfer.setData('text/plain', i.toString())}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const fromIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
+                      const toIndex = i;
+                      if (fromIndex === toIndex) return;
+
+                      const newFiles = [...imageFiles];
+                      const newPreviews = [...previewUrls];
+
+                      // Swap items
+                      const movedFile = newFiles.splice(fromIndex, 1)[0];
+                      newFiles.splice(toIndex, 0, movedFile);
+
+                      const movedPreview = newPreviews.splice(fromIndex, 1)[0];
+                      newPreviews.splice(toIndex, 0, movedPreview);
+
+                      setImageFiles(newFiles);
+                      setPreviewUrls(newPreviews);
+                    }}
+                    className="relative bg-[#141419] p-2 rounded-xl border border-[#262630] flex flex-col items-center gap-2 cursor-grab active:cursor-grabbing hover:border-[#D97706] transition-colors group"
+                  >
+                    {/* Remove button for individual preview photo */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemovePreviewPhoto(i);
+                      }}
+                      className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md cursor-pointer z-10"
+                      title="Remove photo"
+                    >
+                      ✕
+                    </button>
+
+                    <span className="text-[10px] text-[#9CA3AF] font-bold">
+                      #{i + 1} {i === 0 && '(Cover)'}
+                    </span>
+                    <img src={url} alt="preview" className="w-20 h-20 object-cover rounded-lg border border-[#262630] pointer-events-none" />
+                    <span className="text-[10px] text-[#9CA3AF]">⠿ Drag here</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -381,9 +425,6 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
                       ) : (
                         <div className="flex items-center justify-center h-full text-xs text-gray-500">No Image</div>
                       )}
-                      <span className="absolute top-3 left-3 bg-black/70 backdrop-blur-md text-[#D97706] text-[10px] px-2.5 py-1 rounded-full uppercase font-semibold">
-                        {album.date}
-                      </span>
                     </div>
                     <div className="p-4">
                       <h4 className="text-white font-serif font-medium text-base group-hover:text-[#D97706] transition-colors">{album.title}</h4>
@@ -412,7 +453,7 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
             <div className="p-6 border-b border-[#262630] flex justify-between items-center bg-[#0B0B0E]">
               <div>
                 <h2 className="text-xl font-serif font-bold text-white">{activeAlbum.title}</h2>
-                <p className="text-xs text-[#D97706] mt-0.5 uppercase tracking-wider">{activeAlbum.category} • {activeAlbum.date}</p>
+                <p className="text-xs text-[#D97706] mt-0.5 uppercase tracking-wider">{activeAlbum.category}</p>
               </div>
               <div className="flex items-center gap-3">
                 <label className="bg-[#D97706] hover:bg-[#b56203] text-black text-xs font-semibold px-4 py-2 rounded-xl cursor-pointer transition-colors flex items-center gap-1.5">

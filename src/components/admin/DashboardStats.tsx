@@ -6,9 +6,10 @@ interface DashboardStatsProps {
   photos: Photo[];
   categories: Category[];
   offers: Offer[];
+  visitorCount: number; // මෙම පේළිය මෙහි එකතු කරන්න
 }
 
-export default function DashboardStats({ photos, categories, offers }: DashboardStatsProps) {
+export default function DashboardStats({ photos, categories, offers, visitorCount }: DashboardStatsProps) {
   const categoryCounts = categories.map((cat) => {
     const count = photos.filter((p) => p.category === cat.name).length;
     return { name: cat.name, count };
@@ -23,6 +24,12 @@ export default function DashboardStats({ photos, categories, offers }: Dashboard
           <span className="text-[10px] text-[#D97706] font-semibold uppercase tracking-widest">AI Studio Insight</span>
           <h1 className="text-2xl font-serif font-bold text-white uppercase tracking-wider mt-1">Dashboard Overview</h1>
           <p className="text-xs text-[#9CA3AF] mt-1">Real-time performance metrics and studio analytics.</p>
+
+          <div className="flex items-center space-x-1.5 bg-[#141419]/80 px-3 py-1.5 rounded-full border border-[#262630] mt-3">
+            <span>👀 Total Visits:</span>
+            <span className="text-[#D97706] font-bold">{visitorCount}</span>
+          </div>
+          
         </div>
         <div className="bg-[#0B0B0E] border border-[#262630] px-4 py-2 rounded-xl text-xs text-[#9CA3AF]">
           System Status: <span className="text-emerald-400 font-bold">Optimal ⚡</span>

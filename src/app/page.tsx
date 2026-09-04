@@ -10,6 +10,7 @@ interface Category {
   id: number;
   name: string;
   image_url?: string;
+  imageUrl?: string; // Compatibility alternative
 }
 
 interface Album {
@@ -36,7 +37,6 @@ export default function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [albums, setAlbums] = useState<Album[]>([]);
   
-  // Navigation & Visitor Count states
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [activeAlbum, setActiveAlbum] = useState<Album | null>(null);
   const [albumPhotos, setAlbumPhotos] = useState<AlbumPhoto[]>([]);
@@ -45,7 +45,6 @@ export default function Home() {
   const [visitorCount, setVisitorCount] = useState<number>(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
-  // Selected photo for fullscreen lightbox view
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
   useEffect(() => {
@@ -70,7 +69,6 @@ export default function Home() {
           const newViews = (statData.total_views || 0) + 1;
           setVisitorCount(newViews);
 
-          // Update database view count
           await supabase
             .from('site_stats')
             .update({ total_views: newViews })
@@ -101,7 +99,6 @@ export default function Home() {
     setLoadingPhotos(false);
   };
 
-  // Filter albums by selected main category
   const filteredAlbums = selectedCategory 
     ? albums.filter(album => album.category?.toLowerCase() === selectedCategory.toLowerCase())
     : [];
@@ -118,6 +115,7 @@ export default function Home() {
             alt="Hero Background"
             fill
             priority
+            unoptimized
             className="object-cover opacity-20 scale-105 transition-transform duration-1000"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-[#0B0B0E]/60 via-[#0B0B0E]/80 to-[#0B0B0E]" />
@@ -137,13 +135,13 @@ export default function Home() {
                 alt="Studio De-Lions Logo" 
                 width={150} 
                 height={50}
+                unoptimized
                 className="w-32 sm:w-40 h-auto object-contain"
                 priority
               />
             </div>
           </Link>
           
-          {/* Desktop Navigation Bar */}
           <nav className="hidden md:flex space-x-8 text-xs font-medium tracking-widest uppercase text-[#9CA3AF]">
             {navLinks.map((link) => {
               const isActive = link.name === 'Home';
@@ -161,7 +159,6 @@ export default function Home() {
             })}
           </nav>
 
-          {/* Mobile Hamburger Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden text-white p-2 focus:outline-none z-20"
@@ -177,7 +174,6 @@ export default function Home() {
           </button>
         </motion.header>
 
-        {/* Mobile Navigation Drawer */}
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.div
@@ -207,7 +203,6 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        {/* Hero Content */}
         <div className="relative z-10 max-w-7xl mx-auto w-full my-auto py-12">
           <motion.p 
             className="text-[#D97706] text-xs sm:text-sm tracking-[0.3em] uppercase font-semibold mb-4"
@@ -225,7 +220,7 @@ export default function Home() {
             transition={{ duration: 0.9, delay: 0.4 }}
           >
             Welcome to <br />
-            <span className="italic font-light text-[#9CA3AF]">Studio De-Lions.</span>
+            <span className="italic font-light text-[#9CA3AF]">Studio DE-LIONS.</span>
           </motion.h2>
 
           <motion.div
@@ -245,10 +240,7 @@ export default function Home() {
           animate={{ opacity: 1 }}
           transition={{ delay: 1, duration: 1 }}
         >
-          <div className="flex items-center space-x-1.5 bg-[#141419]/80 px-3 py-1.5 rounded-full border border-[#262630]">
-            <span>👀 Total Visits:</span>
-            <span className="text-[#D97706] font-bold">{visitorCount}</span>
-          </div>
+          
           <span className="animate-bounce">↓ Scroll Down</span>
           <div className="hidden sm:block"></div>
         </motion.div>
@@ -298,6 +290,8 @@ export default function Home() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {categories.map((cat, index) => {
                 const count = albums.filter(a => a.category?.toLowerCase() === cat.name.toLowerCase()).length;
+                const catImg = cat.image_url || cat.imageUrl;
+
                 return (
                   <motion.div
                     key={cat.id}
@@ -309,11 +303,12 @@ export default function Home() {
                     viewport={{ once: true }}
                   >
                     <div className="relative aspect-[4/3] w-full overflow-hidden bg-black">
-                      {cat.image_url ? (
+                      {catImg ? (
                         <Image
-                          src={cat.image_url}
+                          src={catImg}
                           alt={cat.name}
                           fill
+                          unoptimized
                           sizes="(max-width: 768px) 100vw, 33vw"
                           className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out opacity-90 group-hover:opacity-100"
                         />
@@ -360,15 +355,13 @@ export default function Home() {
                         src={album.cover_image_url}
                         alt={album.title}
                         fill
+                        unoptimized
                         sizes="(max-width: 768px) 100vw, 33vw"
                         className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out opacity-90 group-hover:opacity-100"
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full text-xs text-gray-600">No Image</div>
                     )}
-                    <span className="absolute top-4 left-4 bg-black/70 backdrop-blur-md text-[#D97706] text-[10px] tracking-widest px-3 py-1 rounded-full uppercase font-semibold">
-                      {album.date}
-                    </span>
                   </div>
 
                   <div className="p-6 bg-[#141419] border-t border-[#262630] flex justify-between items-center">
@@ -394,7 +387,7 @@ export default function Home() {
             <div className="p-6 border-b border-[#262630] flex justify-between items-center bg-[#0B0B0E]">
               <div>
                 <h2 className="text-xl font-serif font-bold text-white">{activeAlbum.title}</h2>
-                <p className="text-xs text-[#D97706] mt-0.5 uppercase tracking-wider">{activeAlbum.category} • {activeAlbum.date}</p>
+                <p className="text-xs text-[#D97706] mt-0.5 uppercase tracking-wider">{activeAlbum.category}</p>
               </div>
               <button 
                 onClick={() => setActiveAlbum(null)}
@@ -421,6 +414,7 @@ export default function Home() {
                         src={photo.image_url} 
                         alt="album photo" 
                         fill
+                        unoptimized
                         sizes="(max-width: 768px) 50vw, 25vw"
                         className="object-cover group-hover:scale-110 transition-transform duration-500" 
                       />
@@ -451,6 +445,7 @@ export default function Home() {
                 src={selectedPhoto} 
                 alt="Fullscreen view" 
                 fill
+                unoptimized
                 className="object-contain rounded-xl" 
               />
             </div>
@@ -471,6 +466,7 @@ export default function Home() {
                     alt="Studio De-Lions Logo" 
                     width={140} 
                     height={45}
+                    unoptimized
                     className="w-32 h-auto object-contain"
                   />
                 </div>
@@ -484,13 +480,13 @@ export default function Home() {
               <h5 className="text-white uppercase tracking-widest font-semibold mb-4 text-xs">Quick Links</h5>
               <ul className="space-y-2.5 text-xs">
                 <li>
-                  <Link href="/" className="hover:text-white transition-colors">Home</Link>
+                  <Link href="/" className="text-[#D97706] border-b border-[#D97706] pb-1 inline-block">Home</Link>
                 </li>
                 <li>
                   <Link href="/gallery" className="hover:text-white transition-colors">Gallery</Link>
                 </li>
                 <li>
-                  <Link href="/about" className="text-[#D97706] border-b border-[#D97706] pb-1 inline-block">About</Link>
+                  <Link href="/about" className="hover:text-white transition-colors">About</Link>
                 </li>
                 <li>
                   <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
@@ -569,7 +565,7 @@ export default function Home() {
           </div>
 
           <div className="pt-8 flex justify-between items-center text-[11px]">
-            <p>© {new Date().getFullYear()} Studio De-Lions. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Studio DE-LIONS. All rights reserved.</p>
             
             <Link 
               href="/admin" 
@@ -577,7 +573,7 @@ export default function Home() {
               className="text-[#9CA3AF]/40 hover:text-[#D97706] transition-colors p-2"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a22 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
             </Link>
           </div>

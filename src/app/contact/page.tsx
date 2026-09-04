@@ -164,16 +164,24 @@ export default function ContactPage() {
               </p>
             </div>
 
+            
             <div>
               <h5 className="text-white uppercase tracking-widest font-semibold mb-4 text-xs">Quick Links</h5>
               <ul className="space-y-2.5 text-xs">
-                <li><Link href="/" className="hover:text-[#D97706] transition-colors">Home</Link></li>
-                <li><Link href="/gallery" className="hover:text-[#D97706] transition-colors">Featured Gallery</Link></li>
-                <li><Link href="/contact" className="hover:text-[#D97706] transition-colors">Services & Pricing</Link></li>
-                <li><Link href="/about" className="hover:text-[#D97706] transition-colors">About Us</Link></li>
+                <li>
+                  <Link href="/" className="hover:text-white transition-colors">Home</Link>
+                </li>
+                <li>
+                  <Link href="/gallery" className="hover:text-white transition-colors">Gallery</Link>
+                </li>
+                <li>
+                  <Link href="/about" className="hover:text-white transition-colors">About</Link>
+                </li>
+                <li>
+                  <Link href="/contact" className="text-[#D97706] border-b border-[#D97706] pb-1 inline-block">Contact</Link>
+                </li>
               </ul>
             </div>
-
             <div>
               <h5 className="text-white uppercase tracking-widest font-semibold mb-4 text-xs">Get In Touch</h5>
               <ul className="space-y-3 text-xs">

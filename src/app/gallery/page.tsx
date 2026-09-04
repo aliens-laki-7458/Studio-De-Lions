@@ -21,7 +21,6 @@ interface Album {
   id: number;
   title: string;
   category: string;
-  date: string;
   cover_image_url: string;
 }
 
@@ -108,6 +107,7 @@ export default function GalleryPage() {
                 src={selectedCategory?.image_url || "https://images.unsplash.com/photo-1516035069371-29a1b244cc32"}
                 alt={selectedCategory?.name || "Gallery Background"}
                 fill
+                sizes="100vw"
                 priority
                 className="object-cover opacity-30 transition-transform duration-1000"
               />
@@ -206,7 +206,7 @@ export default function GalleryPage() {
                             src={cat.image_url}
                             alt={cat.name}
                             fill
-                            sizes="(max-width: 768px) 100vw, 33vw"
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                             className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out opacity-90 group-hover:opacity-100"
                           />
                         ) : (
@@ -283,15 +283,12 @@ export default function GalleryPage() {
                           src={album.cover_image_url}
                           alt={album.title}
                           fill
-                          sizes="(max-width: 768px) 100vw, 33vw"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                           className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out opacity-90 group-hover:opacity-100"
                         />
                       ) : (
                         <div className="flex items-center justify-center h-full text-xs text-gray-600">No Image</div>
                       )}
-                      <span className="absolute top-4 left-4 bg-black/70 backdrop-blur-md text-[#D97706] text-[10px] tracking-widest px-3 py-1 rounded-full uppercase font-semibold">
-                        {album.date}
-                      </span>
                     </div>
 
                     <div className="p-6 bg-[#141419] border-t border-[#262630] flex justify-between items-center">
@@ -344,7 +341,7 @@ export default function GalleryPage() {
           <div className="w-full max-w-5xl flex justify-between items-center bg-[#141419] px-6 py-4 rounded-2xl border border-[#262630] mb-4">
             <div>
               <h2 className="text-lg sm:text-xl font-serif font-bold text-white">{activeAlbum.title}</h2>
-              <p className="text-[11px] text-[#D97706] uppercase tracking-widest">Interactive Photobook • {activeAlbum.date}</p>
+              <p className="text-[11px] text-[#D97706] uppercase tracking-widest">Interactive Photobook</p>
             </div>
             <button 
               onClick={() => setActiveAlbum(null)}
@@ -384,7 +381,7 @@ export default function GalleryPage() {
                       <h1 className="text-2xl sm:text-3xl font-serif mt-4 text-white uppercase">{activeAlbum.title}</h1>
                     </div>
                     <div className="relative w-full h-64 rounded-xl overflow-hidden border border-[#262630]">
-                      <Image src={activeAlbum.cover_image_url} alt="Cover" fill className="object-cover" />
+                      <Image src={activeAlbum.cover_image_url} alt="Cover" fill sizes="380px" className="object-cover" />
                     </div>
                     <div className="text-center pb-4">
                       <p className="text-[10px] text-[#9CA3AF] uppercase tracking-widest">{activeAlbum.category} Collection</p>
@@ -400,7 +397,7 @@ export default function GalleryPage() {
                       onClick={() => setSelectedPhoto(photo.image_url)}
                     >
                       <div className="relative w-full h-[85%] rounded-lg overflow-hidden bg-black shadow-md">
-                        <Image src={photo.image_url} alt={`Page ${index + 1}`} fill className="object-contain group-hover:scale-105 transition-transform duration-500" />
+                        <Image src={photo.image_url} alt={`Page ${index + 1}`} fill sizes="380px" className="object-contain group-hover:scale-105 transition-transform duration-500" />
                       </div>
                       <div className="mt-3 flex justify-between w-full px-4 text-[10px] text-[#9CA3AF]">
                         <span>Page {index + 2}</span>
@@ -412,13 +409,13 @@ export default function GalleryPage() {
                   {/* Back Cover Page */}
                   <div className="demo-page bg-[#1a1a24] text-white flex flex-col justify-center items-center p-8 border-l border-[#262630] select-none text-center">
                      <Image 
-                                    src="/White & Gold.png" 
-                                    alt="Studio De-Lions Logo" 
-                                    width={150} 
-                                    height={50}
-                                    className="w-32 sm:w-40 h-auto object-contain"
-                                    priority
-                                  />
+                            src="/White & Gold.png" 
+                            alt="Studio De-Lions Logo" 
+                            width={150} 
+                            height={50}
+                            className="w-32 sm:w-40 h-auto object-contain"
+                            priority
+                          />
                     <h3 className="font-serif text-xl uppercase tracking-wider text-white mb-3">Studio De-Lions</h3>
                     <p className="text-xs text-[#9CA3AF] max-w-xs leading-relaxed mb-6">Thank you for exploring our portfolio. Contact us to book your dream photoshoot.</p>
                     <Link href="/contact" className="bg-[#D97706] text-black font-bold text-xs uppercase tracking-widest px-6 py-2.5 rounded-full hover:bg-[#b45309] transition-all">
@@ -451,6 +448,7 @@ export default function GalleryPage() {
                 src={selectedPhoto} 
                 alt="Fullscreen view" 
                 fill
+                sizes="100vw"
                 className="object-contain rounded-xl" 
               />
             </div>

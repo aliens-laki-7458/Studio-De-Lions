@@ -7,14 +7,16 @@ import { supabase } from '@/lib/supabase';
 interface ManageCategoriesProps {
   categories: Category[];
   onAddCategory: (categoryName: string, imageUrl: string) => Promise<void>;
+  onDeleteCategory: (categoryId: number) => Promise<void>;
   submittingCat: boolean;
 }
 
-export default function ManageCategories({ categories, onAddCategory, submittingCat }: ManageCategoriesProps) {
+export default function ManageCategories({ categories, onAddCategory, onDeleteCategory, submittingCat }: ManageCategoriesProps) {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryFile, setCategoryFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -37,7 +39,7 @@ export default function ManageCategories({ categories, onAddCategory, submitting
     try {
       let imageUrl = '';
 
-      // Upload category thumbnail if selected
+      // Upload category thumbnail from device if selected
       if (categoryFile) {
         const fileName = `cat_${Date.now()}_${categoryFile.name}`;
         const { error: uploadError } = await supabase.storage
@@ -57,6 +59,20 @@ export default function ManageCategories({ categories, onAddCategory, submitting
       alert('Error uploading category image: ' + err.message);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleDelete = async (catId: number, catName: string) => {
+    if (window.confirm(`Are you sure you want to delete the category "${catName}"?`)) {
+      setDeletingId(catId);
+      try {
+        await onDeleteCategory(catId);
+      } catch (err: any) {
+        console.error(err);
+        alert('Error deleting category: ' + err.message);
+      } finally {
+        setDeletingId(null);
+      }
     }
   };
 
@@ -110,10 +126,21 @@ export default function ManageCategories({ categories, onAddCategory, submitting
           </div>
         )}
 
-        {/* Categories Grid with Thumbnails */}
+        {/* Categories Grid with Thumbnails and Delete Option */}
         <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-6">
           {categories.map((cat: any) => (
-            <div key={cat.id} className="bg-[#0B0B0E] border border-[#262630] rounded-xl overflow-hidden flex flex-col group">
+            <div key={cat.id} className="bg-[#0B0B0E] border border-[#262630] rounded-xl overflow-hidden flex flex-col group relative">
+              
+              <button
+                type="button"
+                onClick={() => handleDelete(cat.id, cat.name)}
+                disabled={deletingId === cat.id}
+                className="absolute top-2 right-2 bg-black/70 hover:bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs transition-colors z-10 cursor-pointer backdrop-blur-sm"
+                title="Delete Category"
+              >
+                {deletingId === cat.id ? '...' : '✕'}
+              </button>
+
               <div className="h-28 bg-[#141419] relative overflow-hidden">
                 {cat.image_url ? (
                   <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />

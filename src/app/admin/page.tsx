@@ -25,6 +25,7 @@ export default function AdminPage() {
   const [albumsCount, setAlbumsCount] = useState<any[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [visitorCount, setVisitorCount] = useState<number>(0); // Visitor count එක සඳහා state එක
 
   const [submittingCat, setSubmittingCat] = useState(false);
   const [submittingOffer, setSubmittingOffer] = useState(false);
@@ -38,17 +39,25 @@ export default function AdminPage() {
   }, []);
 
   const fetchData = async () => {
-    // Dashboard Stats සඳහා පමණක් ඇල්බම් ගණන ලබා ගැනීම
     const { data: albumData } = await supabase.from('albums').select('*');
     if (albumData) setAlbumsCount(albumData);
 
-    // Categories ලබා ගැනීම
     const { data: catData } = await supabase.from('categories').select('*').order('name', { ascending: true });
     if (catData) setCategories(catData);
 
-    // Special Offers ලබා ගැනීම
     const { data: offerData } = await supabase.from('special_offers').select('*').order('created_at', { ascending: false });
     if (offerData) setOffers(offerData);
+
+    // Database එකෙන් visitor count එක ලබා ගැනීම (table නම 'site_stats' ලෙස උපකල්පනය කර ඇත)
+    const { data: statData } = await supabase
+      .from('site_stats')
+      .select('total_views')
+      .eq('id', 1)
+      .single();
+
+    if (statData) {
+      setVisitorCount(statData.total_views || 0);
+    }
   };
 
   useEffect(() => {
@@ -83,14 +92,13 @@ export default function AdminPage() {
     localStorage.removeItem('aliens_admin_auth');
   };
 
-  // Category handler (Secure RPC with duplicate checking)
-  const handleAddCategory = async (categoryName: string) => {
+  const handleAddCategory = async (categoryName: string, imageUrl: string) => {
     const formattedCatName = categoryName.trim().toUpperCase();
     setSubmittingCat(true);
 
-    const { error } = await supabase.rpc('add_category_secure', {
-      cat_name: formattedCatName
-    });
+    const { error } = await supabase.from('categories').insert([
+      { name: formattedCatName, image_url: imageUrl }
+    ]);
 
     if (!error) {
       fetchData();
@@ -106,7 +114,16 @@ export default function AdminPage() {
     setSubmittingCat(false);
   };
 
-  // Offer handlers
+  const handleDeleteCategory = async (categoryId: number) => {
+    const { error } = await supabase.from('categories').delete().eq('id', categoryId);
+    if (!error) {
+      fetchData();
+      alert('🗑️ Category deleted successfully!');
+    } else {
+      alert(`❌ Error deleting category: ${error.message}`);
+    }
+  };
+
   const handleAddOffer = async (data: { title: string; discountText: string; description: string; validUntil: string }) => {
     if (!window.confirm('Publish this special offer?')) return;
     setSubmittingOffer(true);
@@ -210,7 +227,6 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-[#0B0B0E] text-[#F3F4F6] flex flex-col md:flex-row font-sans relative overflow-x-hidden">
       
-      {/* Mobile Top Navbar */}
       <div className="md:hidden bg-[#141419] border-b border-[#262630] p-4 flex justify-between items-center sticky top-0 z-50">
         <div className="flex items-center space-x-3">
           <button
@@ -232,7 +248,6 @@ export default function AdminPage() {
         <div onClick={() => setIsMobileMenuOpen(false)} className="fixed inset-0 bg-black/70 z-40 md:hidden backdrop-blur-sm" />
       )}
 
-      {/* Sidebar Component */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -242,10 +257,14 @@ export default function AdminPage() {
         getGreeting={getGreeting}
       />
 
-      {/* Main Content Area */}
       <main className="flex-1 p-6 md:p-10 overflow-y-auto">
         {activeTab === 'dashboard' && (
-          <DashboardStats photos={albumsCount} categories={categories} offers={offers} />
+          <DashboardStats 
+            photos={albumsCount} 
+            categories={categories} 
+            offers={offers} 
+            visitorCount={visitorCount} /* visitorCount prop එක මෙහි එකතු කර ඇත */
+          />
         )}
         {activeTab === 'photos' && (
           <ManageAlbums categories={categories} />
@@ -254,6 +273,7 @@ export default function AdminPage() {
           <ManageCategories
             categories={categories}
             onAddCategory={handleAddCategory}
+            onDeleteCategory={handleDeleteCategory}
             submittingCat={submittingCat}
           />
         )}
