@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import Navbar from '@/components/Navbar';
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
@@ -16,29 +17,8 @@ export default function ContactPage() {
   return (
     <main className="min-h-screen bg-[#0B0B0E] text-[#F3F4F6] font-sans selection:bg-[#D97706] selection:text-black">
       
-      {/* Header */}
-      <header className="p-6 sm:p-12 border-b border-[#262630]">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <Link href="/" className="flex items-center space-x-3 group py-2">
-            <div className="flex items-center px-3 py-1.5 rounded-lg shadow-md border border-[#D97706]/40">
-              <Image 
-                src="/White & Gold.png" 
-                alt="Studio De-Lions Logo" 
-                width={150} 
-                height={50}
-                className="w-32 sm:w-40 h-auto object-contain"
-                priority
-              />
-            </div>
-          </Link>
-          <nav className="hidden md:flex space-x-8 text-xs font-medium tracking-widest uppercase text-[#9CA3AF]">
-            <Link href="/" className="hover:text-white transition-colors">Home</Link>
-            <Link href="/#gallery" className="hover:text-white transition-colors">Gallery</Link>
-            <Link href="/about" className="hover:text-white transition-colors">About</Link>
-            <Link href="/contact" className="text-[#D97706] border-b border-[#D97706] pb-1">Contact</Link>
-          </nav>
-        </div>
-      </header>
+      {/* Professional Responsive Navbar */}
+      <Navbar />
 
       {/* Main Section */}
       <section className="max-w-7xl mx-auto px-6 py-20">
@@ -188,7 +168,7 @@ export default function ContactPage() {
               <h5 className="text-white uppercase tracking-widest font-semibold mb-4 text-xs">Quick Links</h5>
               <ul className="space-y-2.5 text-xs">
                 <li><Link href="/" className="hover:text-[#D97706] transition-colors">Home</Link></li>
-                <li><Link href="/#gallery" className="hover:text-[#D97706] transition-colors">Featured Gallery</Link></li>
+                <li><Link href="/gallery" className="hover:text-[#D97706] transition-colors">Featured Gallery</Link></li>
                 <li><Link href="/contact" className="hover:text-[#D97706] transition-colors">Services & Pricing</Link></li>
                 <li><Link href="/about" className="hover:text-[#D97706] transition-colors">About Us</Link></li>
               </ul>

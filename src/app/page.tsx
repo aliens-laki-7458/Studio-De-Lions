@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 
 interface Category {
@@ -25,6 +25,13 @@ interface AlbumPhoto {
   image_url: string;
 }
 
+const navLinks = [
+  { name: 'Home', href: '/' },
+  { name: 'Gallery', href: '/gallery' },
+  { name: 'About', href: '/about' },
+  { name: 'Contact', href: '/contact' },
+];
+
 export default function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [albums, setAlbums] = useState<Album[]>([]);
@@ -36,6 +43,7 @@ export default function Home() {
   const [loadingPhotos, setLoadingPhotos] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [visitorCount, setVisitorCount] = useState<number>(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   // Selected photo for fullscreen lightbox view
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
@@ -115,7 +123,7 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-b from-[#0B0B0E]/60 via-[#0B0B0E]/80 to-[#0B0B0E]" />
         </div>
 
-        {/* Header */}
+        {/* Header & Navbar */}
         <motion.header 
           className="relative z-10 flex justify-between items-center max-w-7xl mx-auto w-full"
           initial={{ opacity: 0, y: -20 }}
@@ -123,7 +131,7 @@ export default function Home() {
           transition={{ duration: 0.8 }}
         >
           <Link href="/" className="flex items-center space-x-3 group py-2">
-            <div className="flex items-center  px-3 py-1.5 rounded-lg shadow-md border border-[#D97706]/40">
+            <div className="flex items-center px-3 py-1.5 rounded-lg shadow-md border border-[#D97706]/40">
               <Image 
                 src="/White & Gold.png" 
                 alt="Studio De-Lions Logo" 
@@ -135,13 +143,69 @@ export default function Home() {
             </div>
           </Link>
           
+          {/* Desktop Navigation Bar */}
           <nav className="hidden md:flex space-x-8 text-xs font-medium tracking-widest uppercase text-[#9CA3AF]">
-            <Link href="/" className="text-[#D97706] border-b border-[#D97706] pb-1">Home</Link>
-            <a href="/gallery" className="hover:text-white transition-colors">Gallery</a>
-            <Link href="/about" className="hover:text-white transition-colors">About</Link>
-            <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
+            {navLinks.map((link) => {
+              const isActive = link.name === 'Home';
+              return (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  className={`transition-colors ${
+                    isActive ? 'text-[#D97706] border-b border-[#D97706] pb-1' : 'hover:text-white'
+                  }`}
+                >
+                  {link.name}
+                </Link>
+              );
+            })}
           </nav>
+
+          {/* Mobile Hamburger Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden text-white p-2 focus:outline-none z-20"
+            aria-label="Toggle Menu"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-[#D97706]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {mobileMenuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
         </motion.header>
+
+        {/* Mobile Navigation Drawer */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute top-0 left-0 w-full bg-[#141419] border-b border-[#262630] z-15 pt-24 pb-6 px-6 shadow-2xl md:hidden"
+            >
+              <nav className="flex flex-col space-y-4 text-xs font-medium tracking-widest uppercase text-[#9CA3AF]">
+                {navLinks.map((link) => {
+                  const isActive = link.name === 'Home';
+                  return (
+                    <Link
+                      key={link.name}
+                      href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`transition-colors py-2 border-b border-[#262630]/40 ${
+                        isActive ? 'text-[#D97706]' : 'hover:text-white'
+                      }`}
+                    >
+                      {link.name}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Hero Content */}
         <div className="relative z-10 max-w-7xl mx-auto w-full my-auto py-12">
@@ -186,7 +250,7 @@ export default function Home() {
             <span className="text-[#D97706] font-bold">{visitorCount}</span>
           </div>
           <span className="animate-bounce">↓ Scroll Down</span>
-          <div className="hidden sm:block"></div> {/* Spacer for alignment */}
+          <div className="hidden sm:block"></div>
         </motion.div>
       </section>
 
@@ -401,7 +465,7 @@ export default function Home() {
             
             <div className="space-y-4">
               <Link href="/" className="flex items-center space-x-3">
-                <div className="inline-block  px-3 py-1.5 rounded-lg shadow-md border border-[#D97706]/40">
+                <div className="inline-block px-3 py-1.5 rounded-lg shadow-md border border-[#D97706]/40">
                   <Image 
                     src="/White & Gold.png" 
                     alt="Studio De-Lions Logo" 
@@ -415,14 +479,15 @@ export default function Home() {
                 Capturing emotions, timeless aesthetics, and moments beyond ordinary. Specialized in creative portraiture, commercial shoots, and cinematic visual art.
               </p>
             </div>
-<div>
+
+            <div>
               <h5 className="text-white uppercase tracking-widest font-semibold mb-4 text-xs">Quick Links</h5>
               <ul className="space-y-2.5 text-xs">
                 <li>
                   <Link href="/" className="hover:text-white transition-colors">Home</Link>
                 </li>
                 <li>
-                  <Link href="/#gallery" className="hover:text-white transition-colors">Gallery</Link>
+                  <Link href="/gallery" className="hover:text-white transition-colors">Gallery</Link>
                 </li>
                 <li>
                   <Link href="/about" className="text-[#D97706] border-b border-[#D97706] pb-1 inline-block">About</Link>
@@ -432,7 +497,6 @@ export default function Home() {
                 </li>
               </ul>
             </div>
-
 
             <div>
               <h5 className="text-white uppercase tracking-widest font-semibold mb-4 text-xs">Get In Touch</h5>
@@ -449,28 +513,26 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
                   <span>+94 71 666 2270</span>
-                   
                 </li>
                 <li className="flex items-center space-x-3">
-  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-[#D97706] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-  </svg>
-  <div>
-    
-    <div className="flex items-center space-x-1.5 mt-0.5">
-      <span>+94 77 891 3281</span>
-      <a 
-        href="https://wa.me/94778913281?text=Hello%20Studio%20De-Lions,%20I%20saw%20your%20website%20and%20want%20to%20inquire."
-        target="_blank" 
-        rel="noopener noreferrer"
-        className="text-[#25D366] hover:underline text-[10px] font-semibold uppercase tracking-wider inline-flex items-center gap-1 bg-[#25D366]/10 px-1.5 py-0.5 rounded border border-[#25D366]/30"
-        title="Chat on WhatsApp"
-      >
-        <span>💬 WhatsApp</span>
-      </a>
-    </div>
-  </div>
-</li>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-[#D97706] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                  <div>
+                    <div className="flex items-center space-x-1.5 mt-0.5">
+                      <span>+94 77 891 3281</span>
+                      <a 
+                        href="https://wa.me/94778913281?text=Hello%20Studio%20De-Lions,%20I%20saw%20your%20website%20and%20want%20to%20inquire."
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-[#25D366] hover:underline text-[10px] font-semibold uppercase tracking-wider inline-flex items-center gap-1 bg-[#25D366]/10 px-1.5 py-0.5 rounded border border-[#25D366]/30"
+                        title="Chat on WhatsApp"
+                      >
+                        <span>💬 WhatsApp</span>
+                      </a>
+                    </div>
+                  </div>
+                </li>
                 <li className="flex items-center space-x-3">
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-[#D97706] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />

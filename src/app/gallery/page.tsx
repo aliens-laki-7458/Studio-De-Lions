@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 // @ts-ignore
 import HTMLFlipBook from 'react-pageflip';
+import Navbar from '@/components/Navbar';
 
 interface Category {
   id: number;
@@ -86,7 +87,10 @@ export default function GalleryPage() {
   return (
     <main className="min-h-screen bg-[#0B0B0E] text-[#F3F4F6] font-sans selection:bg-[#D97706] selection:text-black">
       
-      {/* DYNAMIC HEADER / HERO SECTION BASED ON SELECTED CATEGORY */}
+      {/* GLOBAL REUSABLE NAVBAR */}
+      <Navbar />
+
+      {/* DYNAMIC HERO SECTION BASED ON SELECTED CATEGORY */}
       <section className="relative h-[55vh] sm:h-[65vh] w-full flex flex-col justify-between p-6 sm:p-12 overflow-hidden border-b border-[#262630]">
         
         {/* Dynamic Background Image */}
@@ -111,34 +115,6 @@ export default function GalleryPage() {
           </AnimatePresence>
           <div className="absolute inset-0 bg-gradient-to-b from-[#0B0B0E]/70 via-[#0B0B0E]/85 to-[#0B0B0E]" />
         </div>
-
-      {/* Header */}
-        <motion.header 
-          className="relative z-10 flex justify-between items-center max-w-7xl mx-auto w-full"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          <Link href="/" className="flex items-center space-x-3 group py-2">
-            <div className="flex items-center  px-3 py-1.5 rounded-lg shadow-md border border-[#D97706]/40">
-              <Image 
-                src="/White & Gold.png" 
-                alt="Studio De-Lions Logo" 
-                width={150} 
-                height={50}
-                className="w-32 sm:w-40 h-auto object-contain"
-                priority
-              />
-            </div>
-          </Link>
-          
-          <nav className="hidden md:flex space-x-8 text-xs font-medium tracking-widest uppercase text-[#9CA3AF]">
-            <Link href="/" className="hover:text-white transition-colors">Home</Link>
-            <a href="/gallery" className="text-[#D97706] border-b border-[#D97706] pb-1">Gallery</a>
-            <Link href="/about" className="hover:text-white transition-colors">About</Link>
-            <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
-          </nav>
-        </motion.header>
 
         {/* Hero Title Section */}
         <div className="relative z-10 max-w-7xl mx-auto w-full my-auto text-center">
@@ -350,13 +326,13 @@ export default function GalleryPage() {
               Contact Us Now
             </Link>
             <a 
-  href="https://wa.me/94778913281" 
-  target="_blank" 
-  rel="noopener noreferrer"
-  className="bg-[#1F1F28] hover:bg-[#262630] text-white text-xs font-bold uppercase tracking-widest px-8 py-3.5 rounded-full transition-all border border-[#262630] flex items-center gap-2"
->
-  💬 WhatsApp Chat
-</a>
+              href="https://wa.me/94778913281" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="bg-[#1F1F28] hover:bg-[#262630] text-white text-xs font-bold uppercase tracking-widest px-8 py-3.5 rounded-full transition-all border border-[#262630] flex items-center gap-2"
+            >
+              💬 WhatsApp Chat
+            </a>
           </div>
         </div>
       </section>
@@ -435,20 +411,14 @@ export default function GalleryPage() {
 
                   {/* Back Cover Page */}
                   <div className="demo-page bg-[#1a1a24] text-white flex flex-col justify-center items-center p-8 border-l border-[#262630] select-none text-center">
-                    <div className="w-12 h-12 rounded-full bg-[#D97706]/20 border border-[#D97706] flex items-center justify-center text-[#D97706] font-bold mb-4">
+                    <div className="w-12 h-12 rounded-full bg-[#D97706]/20 border border-[#D97706] flex items-center justify-center text-[#D97706] font-bold mb-5">
                       A
                     </div>
-                    {/* Back Cover Page */}
-<                  div className="demo-page bg-[#1a1a24] text-white flex flex-col justify-center items-center p-8 border-l border-[#262630] select-none text-center">
-                 <div className="w-12 h-12 rounded-full bg-[#D97706]/20 border border-[#D97706] flex items-center justify-center text-[#D97706] font-bold mb-5">
-    A
-                  </div>
-                 <h3 className="font-serif text-xl uppercase tracking-wider text-white mb-3">Aliens Studio</h3>
-                 <p className="text-xs text-[#9CA3AF] max-w-xs leading-relaxed mb-6">Thank you for exploring our portfolio. Contact us to book your dream photoshoot.</p>
-                <Link href="/contact" className="bg-[#D97706] text-black font-bold text-xs uppercase tracking-widest px-6 py-2.5 rounded-full hover:bg-[#b45309] transition-all">
-                Book Now
-  </Link>
-</div>
+                    <h3 className="font-serif text-xl uppercase tracking-wider text-white mb-3">Aliens Studio</h3>
+                    <p className="text-xs text-[#9CA3AF] max-w-xs leading-relaxed mb-6">Thank you for exploring our portfolio. Contact us to book your dream photoshoot.</p>
+                    <Link href="/contact" className="bg-[#D97706] text-black font-bold text-xs uppercase tracking-widest px-6 py-2.5 rounded-full hover:bg-[#b45309] transition-all">
+                      Book Now
+                    </Link>
                   </div>
                 </HTMLFlipBook>
               </div>
