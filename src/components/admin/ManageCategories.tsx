@@ -1,5 +1,5 @@
 'use client';
-
+export const dynamic = 'force-dynamic';
 import { useState } from 'react';
 import { Category } from '@/types/admin';
 import { supabase } from '@/lib/supabase';
