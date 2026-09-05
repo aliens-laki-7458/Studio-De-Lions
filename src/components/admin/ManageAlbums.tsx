@@ -20,6 +20,7 @@ interface Album {
 
 interface AlbumPhoto {
   id: number;
+  album_id: number;
   image_url: string;
 }
 
@@ -30,7 +31,6 @@ interface ManageAlbumsProps {
 export default function ManageAlbums({ categories }: ManageAlbumsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
   const categoryParam = searchParams.get('category');
 
   const [albums, setAlbums] = useState<Album[]>([]);
@@ -48,6 +48,14 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
   
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [addingMore, setAddingMore] = useState(false);
+
+  // Album Name Edit කිරීමට අදාළ States
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
+
+  // Save Order සඳහා අවශ්‍ය States
+  const [photosOrderChanged, setPhotosOrderChanged] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
 
   useEffect(() => {
     setSelectedMainCategory(categoryParam);
@@ -86,7 +94,6 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
     }
   };
 
-  // Preview එකෙන් තალu කළ යුතු පින්තූරය ඉවත් කිරීම සඳහා function එක
   const handleRemovePreviewPhoto = (indexToRemove: number) => {
     const updatedFiles = imageFiles.filter((_, index) => index !== indexToRemove);
     const updatedPreviews = previewUrls.filter((_, index) => index !== indexToRemove);
@@ -170,8 +177,11 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
     }
   };
 
-  const handleOpenAlbum = async (album: Album) => {
+  const handleOpenAlbum = (album: Album) => {
     setActiveAlbum(album);
+    setEditedTitle(album.title);
+    setIsEditingTitle(false);
+    setPhotosOrderChanged(false);
     fetchAlbumPhotos(album.id);
   };
 
@@ -180,13 +190,31 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
     const { data, error } = await supabase
       .from('album_photos')
       .select('*')
-      .eq('album_id', albumId);
+      .eq('album_id', albumId)
+      .order('created_at', { ascending: true });
 
     if (error) {
       console.error('Error fetching photos:', error);
     }
     if (data) setAlbumPhotos(data);
     setLoadingPhotos(false);
+  };
+
+  const handleUpdateAlbumTitle = async () => {
+    if (!activeAlbum || !editedTitle.trim()) return;
+    const { error } = await supabase
+      .from('albums')
+      .update({ title: editedTitle.trim() })
+      .eq('id', activeAlbum.id);
+
+    if (!error) {
+      setActiveAlbum({ ...activeAlbum, title: editedTitle.trim() });
+      setIsEditingTitle(false);
+      fetchAlbums();
+      alert('✨ Album title updated successfully!');
+    } else {
+      alert('Error updating title: ' + error.message);
+    }
   };
 
   const handleAddMorePhotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -210,7 +238,9 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
         }
       }
       alert('✨ Photos added successfully!');
+      setPhotosOrderChanged(false);
       fetchAlbumPhotos(activeAlbum.id);
+      fetchAlbums();
     } catch (err: any) {
       console.error(err);
       alert('Error adding photos: ' + err.message);
@@ -219,11 +249,59 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
     }
   };
 
+  // Drag and Drop මඟින් ඡායාරූප අනුපිළිවෙළ මාරු කිරීම
+  const handleReorderExistingPhotos = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+
+    const updatedPhotos = [...albumPhotos];
+    const movedPhoto = updatedPhotos.splice(fromIndex, 1)[0];
+    updatedPhotos.splice(toIndex, 0, movedPhoto);
+
+    setAlbumPhotos(updatedPhotos);
+    setPhotosOrderChanged(true);
+  };
+
+  // මාරු කළ අනුපිළිවෙළ Database එකේ Save කිරීම සහ Cover Image එක Update කිරීම
+  const handleSavePhotosOrder = async () => {
+    if (!activeAlbum || albumPhotos.length === 0) return;
+
+    setSavingOrder(true);
+    try {
+      for (let i = 0; i < albumPhotos.length; i++) {
+        const photo = albumPhotos[i];
+        const newTime = new Date(Date.now() + i * 1000).toISOString();
+        
+        await supabase
+          .from('album_photos')
+          .update({ created_at: newTime })
+          .eq('id', photo.id);
+      }
+
+      const newCoverUrl = albumPhotos[0].image_url;
+      await supabase
+        .from('albums')
+        .update({ cover_image_url: newCoverUrl })
+        .eq('id', activeAlbum.id);
+
+      setActiveAlbum({ ...activeAlbum, cover_image_url: newCoverUrl });
+      setPhotosOrderChanged(false);
+      fetchAlbums();
+      alert('✨ Photos order and cover image saved successfully!');
+    } catch (err: any) {
+      console.error(err);
+      alert('Error saving order: ' + err.message);
+    } finally {
+      setSavingOrder(false);
+    }
+  };
+
   const handleDeletePhoto = async (photoId: number) => {
     if (confirm('මෙම පින්තූරය මකා දැමීමට අවශ්‍යද?')) {
       const { error } = await supabase.from('album_photos').delete().eq('id', photoId);
       if (!error && activeAlbum) {
+        setPhotosOrderChanged(false);
         fetchAlbumPhotos(activeAlbum.id);
+        fetchAlbums();
       } else {
         alert('Error deleting photo');
       }
@@ -246,7 +324,7 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
         <h2 className="text-md font-serif font-semibold text-[#D97706] mb-4 uppercase tracking-wider">Create New Shoot Album</h2>
         <form onSubmit={handleCreateAlbum} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs text-[#9CA3AF] uppercase mb-1">Album / Shoot Title (e.g. Ravi & Dil Wedding)</label>
+            <label className="block text-xs text-[#9CA3AF] uppercase mb-1">Album / Shoot Title</label>
             <input
               type="text"
               value={title}
@@ -283,7 +361,6 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
             />
           </div>
 
-          {/* Photo Reordering Preview Section (Drag and Drop + Remove Option) */}
           {previewUrls.length > 0 && (
             <div className="sm:col-span-2 space-y-2 mt-2">
               <p className="text-xs text-[#D97706] uppercase tracking-wider font-semibold">
@@ -305,7 +382,6 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
                       const newFiles = [...imageFiles];
                       const newPreviews = [...previewUrls];
 
-                      // Swap items
                       const movedFile = newFiles.splice(fromIndex, 1)[0];
                       newFiles.splice(toIndex, 0, movedFile);
 
@@ -317,7 +393,6 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
                     }}
                     className="relative bg-[#141419] p-2 rounded-xl border border-[#262630] flex flex-col items-center gap-2 cursor-grab active:cursor-grabbing hover:border-[#D97706] transition-colors group"
                   >
-                    {/* Remove button for individual preview photo */}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -325,11 +400,9 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
                         handleRemovePreviewPhoto(i);
                       }}
                       className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md cursor-pointer z-10"
-                      title="Remove photo"
                     >
                       ✕
                     </button>
-
                     <span className="text-[10px] text-[#9CA3AF] font-bold">
                       #{i + 1} {i === 0 && '(Cover)'}
                     </span>
@@ -353,7 +426,6 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
         </form>
       </div>
 
-      {/* STEP 1: If no main category is selected, show category folders */}
       {!selectedMainCategory ? (
         <div>
           <h3 className="text-md font-serif font-semibold text-white mb-4 uppercase tracking-wider">Select Category Folder</h3>
@@ -386,7 +458,6 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
           </div>
         </div>
       ) : (
-        /* STEP 2: When a category is selected, show its sub-albums/folders */
         <div>
           <div className="flex justify-between items-center mb-6">
             <div>
@@ -417,11 +488,7 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
                   <div>
                     <div className="h-48 overflow-hidden relative bg-[#0B0B0E]">
                       {album.cover_image_url ? (
-                        <img 
-                          src={album.cover_image_url} 
-                          alt={album.title} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
+                        <img src={album.cover_image_url} alt={album.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                       ) : (
                         <div className="flex items-center justify-center h-full text-xs text-gray-500">No Image</div>
                       )}
@@ -431,7 +498,7 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
                     </div>
                   </div>
                   <div className="p-4 border-t border-[#262630] bg-[#0B0B0E] flex justify-between items-center">
-                    <span className="text-[11px] text-[#9CA3AF]">📂 Click to view & manage photos</span>
+                    <span className="text-[11px] text-[#9CA3AF]">📂 Click to edit & manage photos</span>
                     <button 
                       onClick={(e) => handleDeleteAlbum(e, album.id)} 
                       className="text-red-400 hover:text-red-300 text-xs uppercase font-semibold z-10 cursor-pointer"
@@ -446,15 +513,48 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
         </div>
       )}
 
-      {/* Modal to View & Manage Album Photos */}
+      {/* Modal to View & Manage Album Photos & Rename Title */}
       {activeAlbum && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-[#141419] border border-[#262630] w-full max-w-4xl max-h-[85vh] rounded-3xl overflow-hidden flex flex-col shadow-2xl">
             <div className="p-6 border-b border-[#262630] flex justify-between items-center bg-[#0B0B0E]">
-              <div>
-                <h2 className="text-xl font-serif font-bold text-white">{activeAlbum.title}</h2>
+              <div className="flex-1 mr-4">
+                {isEditingTitle ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={editedTitle}
+                      onChange={(e) => setEditedTitle(e.target.value)}
+                      className="bg-[#141419] border border-[#D97706] text-white px-3 py-1.5 rounded-xl text-sm outline-none w-full max-w-sm"
+                    />
+                    <button 
+                      onClick={handleUpdateAlbumTitle}
+                      className="bg-[#D97706] text-black text-xs font-semibold px-3 py-2 rounded-xl cursor-pointer"
+                    >
+                      Save
+                    </button>
+                    <button 
+                      onClick={() => setIsEditingTitle(false)}
+                      className="text-[#9CA3AF] text-xs px-2 py-1 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-serif font-bold text-white">{activeAlbum.title}</h2>
+                    <button 
+                      onClick={() => setIsEditingTitle(true)}
+                      className="text-xs text-[#D97706] hover:underline bg-[#262630]/50 px-2 py-1 rounded-md cursor-pointer"
+                      title="Edit album title"
+                    >
+                      ✏️ Edit Name
+                    </button>
+                  </div>
+                )}
                 <p className="text-xs text-[#D97706] mt-0.5 uppercase tracking-wider">{activeAlbum.category}</p>
               </div>
+
               <div className="flex items-center gap-3">
                 <label className="bg-[#D97706] hover:bg-[#b56203] text-black text-xs font-semibold px-4 py-2 rounded-xl cursor-pointer transition-colors flex items-center gap-1.5">
                   <span>{addingMore ? 'Uploading...' : '+ Add Photos'}</span>
@@ -477,16 +577,39 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
             </div>
 
             <div className="p-6 overflow-y-auto flex-1">
+              <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-[#0B0B0E] p-3 rounded-xl border border-[#262630]">
+                <p className="text-xs text-[#9CA3AF]">
+                  💡 Tip: Drag & drop photos to reorder. The 1st photo will become the cover image.
+                </p>
+                {photosOrderChanged && (
+                  <button
+                    onClick={handleSavePhotosOrder}
+                    disabled={savingOrder}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-4 py-2 rounded-xl transition-colors cursor-pointer whitespace-nowrap shadow-md"
+                  >
+                    {savingOrder ? 'Saving Order...' : '💾 Save New Order'}
+                  </button>
+                )}
+              </div>
+
               {loadingPhotos ? (
                 <div className="text-center py-12 text-[#9CA3AF] text-sm animate-pulse">Loading photos...</div>
               ) : albumPhotos.length === 0 ? (
                 <div className="text-center py-12 text-[#9CA3AF] text-sm">No photos found in this album. Use "+ Add Photos" above to upload.</div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {albumPhotos.map((photo) => (
+                  {albumPhotos.map((photo, index) => (
                     <div 
                       key={photo.id} 
-                      className="h-40 bg-[#0B0B0E] rounded-xl overflow-hidden border border-[#262630] relative group flex flex-col justify-between"
+                      draggable
+                      onDragStart={(e) => e.dataTransfer.setData('text/plain', index.toString())}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const fromIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
+                        handleReorderExistingPhotos(fromIndex, index);
+                      }}
+                      className="bg-[#0B0B0E] rounded-xl overflow-hidden border border-[#262630] relative group flex flex-col justify-between cursor-grab active:cursor-grabbing hover:border-[#D97706] transition-colors"
                     >
                       <div 
                         onClick={() => setSelectedPhoto(photo.image_url)} 
@@ -495,16 +618,21 @@ export default function ManageAlbums({ categories }: ManageAlbumsProps) {
                         <img 
                           src={photo.image_url} 
                           alt="album photo" 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none" 
                         />
                         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                           <span className="text-white text-xs bg-black/60 px-2 py-1 rounded-md">🔍 View</span>
                         </div>
                       </div>
                       <div className="p-2 bg-[#141419] border-t border-[#262630] flex justify-between items-center text-xs">
-                        <span className="text-[10px] text-[#9CA3AF]">Photo</span>
+                        <span className="text-[10px] text-[#9CA3AF] font-bold">
+                          ⠿ #{index + 1} {index === 0 && '(Cover)'}
+                        </span>
                         <button 
-                          onClick={() => handleDeletePhoto(photo.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeletePhoto(photo.id);
+                          }}
                           className="text-red-400 hover:text-red-300 font-semibold text-[11px] cursor-pointer"
                         >
                           Delete
