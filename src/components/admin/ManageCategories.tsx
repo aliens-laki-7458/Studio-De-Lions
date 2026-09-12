@@ -4,25 +4,54 @@ import { useState } from 'react';
 import { Category } from '@/types/admin';
 import { supabase } from '@/lib/supabase';
 
+// Local interface extension to include image_url
+interface LocalCategory extends Category {
+  image_url?: string;
+}
+
 interface ManageCategoriesProps {
-  categories: Category[];
+  categories: LocalCategory[];
   onAddCategory: (categoryName: string, imageUrl: string) => Promise<void>;
   onDeleteCategory: (categoryId: number) => Promise<void>;
+  onUpdateCategory?: (categoryId: number, newName: string, newImageUrl: string) => Promise<void>;
+  onSelectCategory?: (category: LocalCategory) => void; // Category එකක් Click කළ විට ක්‍රියාත්මක වීමට
   submittingCat: boolean;
 }
 
-export default function ManageCategories({ categories, onAddCategory, onDeleteCategory, submittingCat }: ManageCategoriesProps) {
+export default function ManageCategories({ 
+  categories, 
+  onAddCategory, 
+  onDeleteCategory, 
+  onUpdateCategory, 
+  onSelectCategory,
+  submittingCat 
+}: ManageCategoriesProps) {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryFile, setCategoryFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
+  // Edit කිරීමට අදාළ States
+  const [editingCategory, setEditingCategory] = useState<LocalCategory | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const [editPreviewUrl, setEditPreviewUrl] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setCategoryFile(file);
       setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleEditFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setEditFile(file);
+      setEditPreviewUrl(URL.createObjectURL(file));
     }
   };
 
@@ -39,7 +68,6 @@ export default function ManageCategories({ categories, onAddCategory, onDeleteCa
     try {
       let imageUrl = '';
 
-      // Upload category thumbnail from device if selected
       if (categoryFile) {
         const fileName = `cat_${Date.now()}_${categoryFile.name}`;
         const { error: uploadError } = await supabase.storage
@@ -62,7 +90,57 @@ export default function ManageCategories({ categories, onAddCategory, onDeleteCa
     }
   };
 
-  const handleDelete = async (catId: number, catName: string) => {
+  const handleOpenEdit = (cat: LocalCategory, e: React.MouseEvent) => {
+    e.stopPropagation(); // Card එක click වීම වැළැක්වීමට
+    setEditingCategory(cat);
+    setEditName(cat.name);
+    setEditPreviewUrl(cat.image_url || null);
+    setEditFile(null);
+  };
+
+  const handleUpdateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCategory || !editName.trim()) return;
+
+    setUpdating(true);
+    try {
+      let imageUrl = editingCategory.image_url || '';
+
+      if (editFile) {
+        const fileName = `cat_${Date.now()}_${editFile.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('gallery')
+          .upload(fileName, editFile, { contentType: 'image/jpeg', upsert: true });
+
+        if (uploadError) throw uploadError;
+        imageUrl = getStorageUrl(fileName);
+      }
+
+      if (onUpdateCategory) {
+        await onUpdateCategory(editingCategory.id, editName.trim(), imageUrl);
+      } else {
+        const { error } = await supabase
+          .from('categories')
+          .update({ name: editName.trim(), image_url: imageUrl })
+          .eq('id', editingCategory.id);
+        if (error) throw error;
+        window.location.reload();
+      }
+
+      setEditingCategory(null);
+      setEditFile(null);
+      setEditPreviewUrl(null);
+      alert('✨ Category updated successfully!');
+    } catch (err: any) {
+      console.error(err);
+      alert('Error updating category: ' + err.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDelete = async (catId: number, catName: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Card එක click වීම වැළැක්වීමට
     if (window.confirm(`Are you sure you want to delete the category "${catName}"?`)) {
       setDeletingId(catId);
       try {
@@ -126,19 +204,35 @@ export default function ManageCategories({ categories, onAddCategory, onDeleteCa
           </div>
         )}
 
-        {/* Categories Grid with Thumbnails and Delete Option */}
+        {/* Categories Grid with Thumbnails, Edit, Delete and Click-to-View Options */}
         <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-6">
-          {categories.map((cat: any) => (
-            <div key={cat.id} className="bg-[#0B0B0E] border border-[#262630] rounded-xl overflow-hidden flex flex-col group relative">
+          {categories.map((cat: LocalCategory) => (
+            <div 
+              key={cat.id} 
+              onClick={() => onSelectCategory && onSelectCategory(cat)}
+              className="bg-[#0B0B0E] border border-[#262630] rounded-xl overflow-hidden flex flex-col group relative cursor-pointer hover:border-[#D97706] transition-all"
+              title="Click to view category details"
+            >
               
+              {/* Delete Button */}
               <button
                 type="button"
-                onClick={() => handleDelete(cat.id, cat.name)}
+                onClick={(e) => handleDelete(cat.id, cat.name, e)}
                 disabled={deletingId === cat.id}
                 className="absolute top-2 right-2 bg-black/70 hover:bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-xs transition-colors z-10 cursor-pointer backdrop-blur-sm"
                 title="Delete Category"
               >
                 {deletingId === cat.id ? '...' : '✕'}
+              </button>
+
+              {/* Edit Button */}
+              <button
+                type="button"
+                onClick={(e) => handleOpenEdit(cat, e)}
+                className="absolute top-2 right-11 bg-black/70 hover:bg-[#D97706] text-white w-8 h-8 rounded-full flex items-center justify-center text-xs transition-colors z-10 cursor-pointer backdrop-blur-sm"
+                title="Edit Category"
+              >
+                ✏️
               </button>
 
               <div className="h-28 bg-[#141419] relative overflow-hidden">
@@ -155,6 +249,70 @@ export default function ManageCategories({ categories, onAddCategory, onDeleteCa
           ))}
         </div>
       </div>
+
+      {/* Edit Category Modal */}
+      {editingCategory && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#141419] border border-[#262630] w-full max-w-md rounded-2xl overflow-hidden p-6 space-y-4 shadow-2xl">
+            <div className="flex justify-between items-center border-b border-[#262630] pb-3">
+              <h3 className="text-md font-serif font-bold text-white uppercase tracking-wider">Edit Category</h3>
+              <button 
+                onClick={() => setEditingCategory(null)}
+                className="text-[#9CA3AF] hover:text-white text-sm font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs text-[#9CA3AF] uppercase mb-1">Category Name</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full bg-[#0B0B0E] border border-[#262630] text-white p-3 rounded-xl text-sm outline-none focus:border-[#D97706]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-[#9CA3AF] uppercase mb-1">Change Thumbnail Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleEditFileChange}
+                  className="w-full bg-[#0B0B0E] border border-[#262630] text-[#9CA3AF] p-2.5 rounded-xl text-xs outline-none file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#D97706] file:text-black cursor-pointer"
+                />
+              </div>
+
+              {editPreviewUrl && (
+                <div className="flex items-center gap-4">
+                  <span className="text-xs text-[#9CA3AF]">Current / New Thumbnail:</span>
+                  <img src={editPreviewUrl} alt="Edit preview" className="w-16 h-16 object-cover rounded-xl border border-[#262630]" />
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingCategory(null)}
+                  className="bg-[#262630] hover:bg-[#353542] text-white text-xs px-4 py-2.5 rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updating}
+                  className="bg-[#D97706] hover:bg-[#b56203] text-black font-semibold text-xs uppercase px-6 py-2.5 rounded-xl transition-colors cursor-pointer"
+                >
+                  {updating ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
