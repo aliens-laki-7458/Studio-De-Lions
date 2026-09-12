@@ -4,36 +4,22 @@ import { useState } from 'react';
 import { Category } from '@/types/admin';
 import { supabase } from '@/lib/supabase';
 
-// Local interface extension to include image_url
-interface LocalCategory extends Category {
-  image_url?: string;
-}
-
 interface ManageCategoriesProps {
-  categories: LocalCategory[];
+  categories: Category[];
   onAddCategory: (categoryName: string, imageUrl: string) => Promise<void>;
   onDeleteCategory: (categoryId: number) => Promise<void>;
-  onUpdateCategory?: (categoryId: number, newName: string, newImageUrl: string) => Promise<void>;
-  onSelectCategory?: (category: LocalCategory) => void; // Category එකක් Click කළ විට ක්‍රියාත්මක වීමට
   submittingCat: boolean;
 }
 
-export default function ManageCategories({ 
-  categories, 
-  onAddCategory, 
-  onDeleteCategory, 
-  onUpdateCategory, 
-  onSelectCategory,
-  submittingCat 
-}: ManageCategoriesProps) {
+export default function ManageCategories({ categories, onAddCategory, onDeleteCategory, submittingCat }: ManageCategoriesProps) {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryFile, setCategoryFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  // Edit කිරීමට අදාළ States
-  const [editingCategory, setEditingCategory] = useState<LocalCategory | null>(null);
+  // Edit කිරීමට අදාළ states
+  const [editingCategory, setEditingCategory] = useState<any | null>(null);
   const [editName, setEditName] = useState('');
   const [editFile, setEditFile] = useState<File | null>(null);
   const [editPreviewUrl, setEditPreviewUrl] = useState<string | null>(null);
@@ -90,14 +76,16 @@ export default function ManageCategories({
     }
   };
 
-  const handleOpenEdit = (cat: LocalCategory, e: React.MouseEvent) => {
-    e.stopPropagation(); // Card එක click වීම වැළැක්වීමට
+  // Edit Modal එක විවෘත කිරීම
+  const handleOpenEdit = (cat: any, e: React.MouseEvent) => {
+    e.stopPropagation();
     setEditingCategory(cat);
     setEditName(cat.name);
     setEditPreviewUrl(cat.image_url || null);
     setEditFile(null);
   };
 
+  // Edit කළ පසු Save කිරීම (Foreign Key එක හරහා albums වල නම ස්වයංක්‍රීයව වෙනස් වේ)
   const handleUpdateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCategory || !editName.trim()) return;
@@ -105,6 +93,7 @@ export default function ManageCategories({
     setUpdating(true);
     try {
       let imageUrl = editingCategory.image_url || '';
+      const newCategoryName = editName.trim();
 
       if (editFile) {
         const fileName = `cat_${Date.now()}_${editFile.name}`;
@@ -116,21 +105,18 @@ export default function ManageCategories({
         imageUrl = getStorageUrl(fileName);
       }
 
-      if (onUpdateCategory) {
-        await onUpdateCategory(editingCategory.id, editName.trim(), imageUrl);
-      } else {
-        const { error } = await supabase
-          .from('categories')
-          .update({ name: editName.trim(), image_url: imageUrl })
-          .eq('id', editingCategory.id);
-        if (error) throw error;
-        window.location.reload();
-      }
+      const { error: catError } = await supabase
+        .from('categories')
+        .update({ name: newCategoryName, image_url: imageUrl })
+        .eq('id', editingCategory.id);
+
+      if (catError) throw catError;
 
       setEditingCategory(null);
       setEditFile(null);
       setEditPreviewUrl(null);
       alert('✨ Category updated successfully!');
+      window.location.reload();
     } catch (err: any) {
       console.error(err);
       alert('Error updating category: ' + err.message);
@@ -140,7 +126,7 @@ export default function ManageCategories({
   };
 
   const handleDelete = async (catId: number, catName: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Card එක click වීම වැළැක්වීමට
+    e.stopPropagation();
     if (window.confirm(`Are you sure you want to delete the category "${catName}"?`)) {
       setDeletingId(catId);
       try {
@@ -204,15 +190,10 @@ export default function ManageCategories({
           </div>
         )}
 
-        {/* Categories Grid with Thumbnails, Edit, Delete and Click-to-View Options */}
+        {/* Categories Grid with Thumbnails, Edit and Delete Options */}
         <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-6">
-          {categories.map((cat: LocalCategory) => (
-            <div 
-              key={cat.id} 
-              onClick={() => onSelectCategory && onSelectCategory(cat)}
-              className="bg-[#0B0B0E] border border-[#262630] rounded-xl overflow-hidden flex flex-col group relative cursor-pointer hover:border-[#D97706] transition-all"
-              title="Click to view category details"
-            >
+          {categories.map((cat: any) => (
+            <div key={cat.id} className="bg-[#0B0B0E] border border-[#262630] rounded-xl overflow-hidden flex flex-col group relative">
               
               {/* Delete Button */}
               <button
@@ -288,7 +269,7 @@ export default function ManageCategories({
 
               {editPreviewUrl && (
                 <div className="flex items-center gap-4">
-                  <span className="text-xs text-[#9CA3AF]">Current / New Thumbnail:</span>
+                  <span className="text-xs text-[#9CA3AF]">Thumbnail Preview:</span>
                   <img src={editPreviewUrl} alt="Edit preview" className="w-16 h-16 object-cover rounded-xl border border-[#262630]" />
                 </div>
               )}
